@@ -1,0 +1,40 @@
+{
+    "manifest_version": 3,
+    "name": "Match Profile Automator",
+    "version": "1.2",
+    "description": "Automates profile creation for Match dating site in parallel.",
+    "permissions": [
+        "storage",
+        "activeTab",
+        "tabs",
+        "scripting"
+    ],
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*.match.com/*",
+                "*://localhost/*"
+            ],
+            "js": [
+                "utils.js",
+                "content.js"
+            ]
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "assets/img.png"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}
