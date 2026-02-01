@@ -1,5 +1,7 @@
 (async function () {
     console.log("Match Profile Automator Content Script Active on: " + window.location.href);
+    var isRegistration;
+
 
     // Helper to simulate human typing/interaction
     const simulateInteraction = async (element, value) => {
@@ -144,7 +146,7 @@
         const startBtn = findElement(['button[data-testid="advance"]', 'button.submit']);
         const viewSingles = Array.from(document.querySelectorAll('a, button')).find(el => el.textContent?.toLowerCase().includes('view singles'));
 
-        var isRegistration = !!(genderSelect || bdayInput || nameInput || emailInput || pwdInput || startBtn);
+        isRegistration = !!(genderSelect || bdayInput || nameInput || emailInput || pwdInput || startBtn);
         console.log(`[Loop] isRegistration: ${isRegistration}`);
 
         if (genderSelect && !genderSelect.dataset.done) {
@@ -261,6 +263,18 @@
             await window.Utils.delay(800);
             findAndClickButton(["That's it", "Create Account", "Sign Up"]);
         }
+
+        // 5.5 Intro "tell us about yourself" screen
+        if (!isRegistration) {
+            const introHeader = document.querySelector('[data-testid="desktop-intro-header"]');
+            if (introHeader) {
+                console.log("Found Intro Screen, clicking 'Click here to get started'...");
+                if (findAndClickButton(["Click here to get started"])) {
+                    await window.Utils.delay(1000);
+                }
+            }
+        }
+
 
 
         // 6. Photo Upload Step
