@@ -1,6 +1,5 @@
 (async function () {
     console.log("Match Profile Automator Content Script Active on: " + window.location.href);
-    var isRegistration;
 
 
     // Helper to simulate human typing/interaction
@@ -146,7 +145,7 @@
         const startBtn = findElement(['button[data-testid="advance"]', 'button.submit']);
         const viewSingles = Array.from(document.querySelectorAll('a, button')).find(el => el.textContent?.toLowerCase().includes('view singles'));
 
-        isRegistration = !!(genderSelect || bdayInput || nameInput || emailInput || pwdInput || startBtn);
+        const isRegistration = !!(genderSelect || bdayInput || nameInput || emailInput || pwdInput || startBtn);
         console.log(`[Loop] isRegistration: ${isRegistration}`);
 
         if (genderSelect && !genderSelect.dataset.done) {
@@ -278,27 +277,77 @@
 
 
         // 6. Photo Upload Step
-        const fileInput = document.querySelector('input[type="file"]');
+        const fileInput = document.querySelector('input[type="file"], #photo-to-upload');
+        const finalizeBtn = document.querySelector('.css-44m5wj');
+
+        // SPECIAL CASE: photo_upload_additional_photos
+        // On this specific page, we ONLY want to click "Continue". Do NOT attempt any photo uploads.
+        if (window.location.href.includes('photo_upload_additional_photos')) {
+            console.log("On Additional Photos page. Seeking 'Continue' button...");
+
+            // Search all buttons and interactive elements for "Continue" text
+            const allBtns = Array.from(document.querySelectorAll('button, [role="button"], span'));
+            const continueBtn = allBtns.find(b => {
+                const text = (b.innerText || b.textContent || "").toLowerCase().trim();
+                return text === 'continue' || (text.includes('continue') && b.classList.contains('css-6nte24'));
+            });
+
+            if (continueBtn && continueBtn.offsetParent !== null) {
+                console.log("Found 'Continue' on Additional Photos page, clicking...");
+                continueBtn.click();
+                await window.Utils.delay(2000);
+                return setTimeout(() => runAutomationLoop(email), 1000);
+            } else {
+                console.log("Continue button not found or not ready on Additional Photos page, waiting...");
+                // Bail out early MUST return here so it doesn't fall through to general upload logic
+                return setTimeout(() => runAutomationLoop(email), 2000);
+            }
+        }
+
+        // If the finalized upload button is visible (Screens 9, 10, 11), click it!
+        if (finalizeBtn && finalizeBtn.offsetParent !== null) {
+            console.log("Found specialized photo button (.css-44m5wj), clicking...");
+            finalizeBtn.click();
+            await window.Utils.delay(2000);
+            return setTimeout(() => runAutomationLoop(email), 1000);
+        }
+
         if (fileInput && !fileInput.dataset.filled) {
             console.log("Handling Photo Upload...");
-            await setFileInput(fileInput, 'assets/img.png');
-            fileInput.dataset.filled = "true";
 
-            // Wait for upload/preview
-            await window.Utils.delay(2000);
-
-            // Handle Zoom/Scale
-            const slider = document.querySelector('input[type="range"], .slider, [role="slider"]');
-            if (slider) {
-                console.log("Adjusting Zoom...");
-                // Zoom in a bit (max usually)
-                slider.value = slider.max;
-                slider.dispatchEvent(new Event('input', { bubbles: true }));
-                slider.dispatchEvent(new Event('change', { bubbles: true }));
+            // Check if it's the primary photo upload screen from the HTML provided (Page 9)
+            const photoLabel = document.querySelector('label[for="photo-to-upload"], #photo-to-upload-label');
+            if (photoLabel && photoLabel.offsetParent !== null) {
+                console.log("Found Photo Upload Label, clicking label to trigger...");
+                photoLabel.click();
                 await window.Utils.delay(500);
             }
 
-            findAndClickButton(['Save', 'Upload', 'Continue', 'Next']);
+            await setFileInput(fileInput, 'assets/img.png');
+            fileInput.dataset.filled = "true";
+
+            // Wait for upload/preview/modal to appear
+            await window.Utils.delay(3000);
+
+            // Handle Zoom/Scale if present
+            const slider = document.querySelector('input[type="range"], .slider, [role="slider"], .rcl-slider-handle');
+            if (slider) {
+                console.log("Adjusting Zoom...");
+                // In some cases slider is not a simple input range
+                if (slider.tagName === 'INPUT') {
+                    slider.value = slider.max;
+                }
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+                slider.dispatchEvent(new Event('change', { bubbles: true }));
+                await window.Utils.delay(1000);
+            }
+
+            // Re-check for finalize button after setting file
+            const finalizeBtnAfter = document.querySelector('.css-44m5wj');
+            if (finalizeBtnAfter) {
+                finalizeBtnAfter.click();
+                await window.Utils.delay(2000);
+            }
         }
 
         // 7. Post-Login Flow (Screens 1-9) & Questions
@@ -351,27 +400,63 @@
 
 
         if (!isRegistration) {
-            console.log("Handling Post-Login Screens...");
+            console.log("Handling Post-Login Screens (Step 7)...");
             let actionTaken = false;
 
             try {
-                // 1. Skip Actions (Prioritize "I'd rather not say" as a skip)
-                if (!actionTaken && findAndClickButton(['Skip', 'Skip for now', 'No thanks', "rather not say", "Maybe later", "Don't show"])) {
-                    actionTaken = true;
+                // 7.1 Auto-Answer Questions (Radio/Buttons)
+                const radioButtons = Array.from(document.querySelectorAll('button[role="radio"], [role="radio"] button, .radio-button, button.ZKm8POHBkPYSkSnv9F6n'));
+                const unSelectedRadio = radioButtons.filter(b => b.getAttribute('aria-checked') === 'true').length === 0;
+
+                if (!actionTaken && radioButtons.length > 0 && unSelectedRadio) {
+                    console.log("Found Radio buttons, selecting one...");
+                    // Try to find a group container
+                    const parent = radioButtons[0].closest('[role="list"], .rGpBpe5FwChyweCjkHNQ') || radioButtons[0].parentElement;
+                    const groupOptions = Array.from(parent.querySelectorAll('button[role="radio"], button.ZKm8POHBkPYSkSnv9F6n'));
+                    if (groupOptions.length > 0) {
+                        const randomOption = groupOptions[Math.floor(Math.random() * groupOptions.length)];
+                        console.log(`Clicking option: ${randomOption.textContent}`);
+                        randomOption.click();
+                        actionTaken = true;
+                        await window.Utils.delay(1000);
+                    }
                 }
 
-                // 2. Continue Actions
-                if (!actionTaken && findAndClickButton(['Continue', 'Next Step', 'Next', 'Save', 'Upload', 'show me how', 'Got it', "I'm done", "Let's go", "Ok", "Confirm"])) {
+                // 7.2 Auto-Answer Questions (Checkboxes)
+                const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+                const anyChecked = checkboxes.some(c => c.checked);
+
+                if (!actionTaken && checkboxes.length > 0 && !anyChecked) {
+                    console.log("Found checkboxes, selecting some...");
+                    // Select 1-2 random options
+                    const numToSelect = Math.min(checkboxes.length, 1 + Math.floor(Math.random() * 2));
+                    const shuffled = checkboxes.sort(() => 0.5 - Math.random());
+                    for (let i = 0; i < numToSelect; i++) {
+                        shuffled[i].click();
+                    }
                     actionTaken = true;
+                    await window.Utils.delay(1000);
                 }
 
-                // 3. Right Arrow Action (uses updated finder)
+                // 7.3 Click Primary Action (Continue / Next / Skip)
+                if (!actionTaken) {
+                    // Try Skip first if we are stuck or as a fallback
+                    // But usually we want to Continue if we selected something
+                    const continueBtn = findElement(['button:not([disabled])', 'button[role="button"]:not([disabled])', '.css-u0k5dv:not([disabled])', '.css-44m5wj:not([disabled])']);
+                    const btnText = continueBtn ? continueBtn.textContent?.toLowerCase() : '';
+
+                    if (continueBtn && (btnText.includes('continue') || btnText.includes('next') || btnText.includes('save') || btnText.includes('it\'s me') || btnText.includes('upload'))) {
+                        console.log("Clicking primary action button...");
+                        continueBtn.click();
+                        actionTaken = true;
+                    } else if (findAndClickButton(['Skip', 'Skip for now', 'No thanks', "rather not say", "Maybe later"])) {
+                        console.log("Stuck or no primary button, clicking Skip...");
+                        actionTaken = true;
+                    }
+                }
+
+                // 7.4 Arrow Fallback
                 if (!actionTaken && findAndClickButton(['Right Arrow', 'Next Page', 'Arrow'])) {
-                    actionTaken = true;
-                }
-
-                // 4. Like Action (Home Page)
-                if (!actionTaken && findAndClickButton(['Like'])) { // Will click if SVG found
                     actionTaken = true;
                 }
 
