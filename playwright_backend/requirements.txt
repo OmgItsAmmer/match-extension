@@ -1,0 +1,11 @@
+# Requirements for Playwright Backend
+
+# Core dependency
+playwright>=1.40.0
+
+# API dependencies for Postman testing
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Optional: For better type hints
+typing-extensions>=4.8.0

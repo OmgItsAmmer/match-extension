@@ -9,11 +9,13 @@ class ProfileRequest(BaseModel):
     email: str
     password: str
     name: str
+    region: str = "us"  # "us" or "uk"
+    photo_path: str = "automation-extension/assets/img.png"
 
-def run_automation_task(email, password, name):
+def run_automation_task(email, password, name, region="us", photo_path="automation-extension/assets/img.png"):
     automator = MatchAutomator()
     try:
-        automator.run_registration(email, password, name)
+        automator.run_registration(email, password, name, photo_path, region)
     except Exception as e:
         print(f"Automation failed: {e}")
     finally:
@@ -23,8 +25,19 @@ def run_automation_task(email, password, name):
 
 @app.post("/automate")
 async def start_automation(request: ProfileRequest, background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_automation_task, request.email, request.password, request.name)
-    return {"status": "started", "email": request.email}
+    background_tasks.add_task(
+        run_automation_task, 
+        request.email, 
+        request.password, 
+        request.name,
+        request.region,
+        request.photo_path
+    )
+    return {
+        "status": "started", 
+        "email": request.email, 
+        "region": request.region
+    }
 
 @app.get("/")
 def health_check():
