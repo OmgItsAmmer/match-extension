@@ -1,61 +1,66 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const csvFileInput = document.getElementById('csvFile');
+    const tabCountInput = document.getElementById('tabCount');
     const startBtn = document.getElementById('startBtn');
     const statusDiv = document.getElementById('status');
-    const fileInfoDiv = document.getElementById('fileInfo');
 
-    let emails = [];
+    function generateRandomString(length) {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
 
-    csvFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target.result;
-            const rows = text.split('\n').map(row => row.trim()).filter(row => row !== '');
-
-            if (rows.length === 0) {
-                showStatus('CSV file is empty.', 'error');
-                return;
-            }
-
-            const header = rows[0].toLowerCase();
-            if (!header.includes('emailaddress')) {
-                showStatus('CSV must contain a column named "emailaddress".', 'error');
-                return;
-            }
-
-            const emailIndex = header.split(',').findIndex(h => h.includes('emailaddress'));
-
-            emails = rows.slice(1).map(row => {
-                const columns = row.split(',');
-                return columns[emailIndex] ? columns[emailIndex].replace(/"/g, '').trim() : null;
-            }).filter(email => email && email.includes('@'));
-
-            if (emails.length === 0) {
-                showStatus('No valid emails found in CSV.', 'error');
-            } else {
-                fileInfoDiv.textContent = `Found ${emails.length} emails.`;
-                showStatus('Ready to start parallel automation!', 'success');
-                startBtn.disabled = false;
-                chrome.storage.local.set({ emails, tabEmailMap: {}, isRunning: false });
-            }
-        };
-        reader.readAsText(file);
-    });
+    function generateRandomEmails(count) {
+        const emails = [];
+        const domain = 'gmail.com';
+        for (let i = 0; i < count; i++) {
+            // Random prefix: 8-12 characters
+            const prefix = generateRandomString(8 + Math.floor(Math.random() * 5));
+            // Random suffix: 3-5 digits
+            const suffix = Math.floor(100 + Math.random() * 9000);
+            emails.push(`${prefix}${suffix}@${domain}`);
+        }
+        return emails;
+    }
 
     startBtn.addEventListener('click', () => {
-        chrome.runtime.sendMessage({
-            action: 'startParallelAutomation',
-            emails: emails
-        }, (response) => {
-            showStatus(`Starting ${emails.length} tabs in parallel...`, 'info');
+        const count = parseInt(tabCountInput.value, 10);
+
+        if (isNaN(count) || count < 1) {
+            showStatus('Please enter a valid number of tabs.', 'error');
+            return;
+        }
+
+        if (count > 10) {
+            showStatus('Maximum 10 parallel tabs allowed for stability.', 'error');
+            return;
+        }
+
+        const emails = generateRandomEmails(count);
+
+        showStatus(`Generating ${count} profiles...`, 'info');
+
+        // Store emails and reset state
+        chrome.storage.local.set({
+            emails,
+            tabEmailMap: {},
+            isRunning: true
+        }, () => {
+            // Trigger background automation
+            chrome.runtime.sendMessage({
+                action: 'startParallelAutomation',
+                emails: emails
+            }, (response) => {
+                showStatus(`Launched ${count} tabs. Check browser windows!`, 'success');
+            });
         });
     });
 
     function showStatus(msg, type) {
         statusDiv.textContent = msg;
         statusDiv.className = type;
+        statusDiv.style.display = 'block';
     }
 });

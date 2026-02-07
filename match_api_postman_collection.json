@@ -1,0 +1,88 @@
+{
+    "info": {
+        "_postman_id": "7d9e8f42-a1b2-4c3d-bd5e-6f8g9h0i1j2k",
+        "name": "Match Selenium API",
+        "description": "Collection for testing the Match.com Selenium Automation Backend API.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health Check",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        ""
+                    ]
+                },
+                "description": "Check if the API is running."
+            },
+            "response": []
+        },
+        {
+            "name": "Start Automation",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"email\": \"test_user_{{$randomInt}}@gmail.com\",\n    \"password\": \"SecurePass123!\",\n    \"name\": \"John\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{base_url}}/automate",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "automate"
+                    ]
+                },
+                "description": "Trigger a Match.com profile registration flow in the background."
+            },
+            "response": []
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "type": "string"
+        }
+    ]
+}

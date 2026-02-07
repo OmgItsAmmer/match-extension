@@ -8,15 +8,18 @@
             element.focus();
             element.click();
 
-            // React Native/Synthetic Event override
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(element, value);
-            } else {
-                element.value = value;
+            // Clear first
+            element.value = "";
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Improved React typing
+            for (const char of value) {
+                document.execCommand('insertText', false, char);
+                element.dispatchEvent(new InputEvent('input', { data: char, bubbles: true }));
+                await window.Utils.delay(50);
             }
 
-            const events = ["keydown", "keypress", "input", "keyup", "change"];
+            const events = ["keydown", "keypress", "keyup", "change"];
             for (const eventType of events) {
                 element.dispatchEvent(new Event(eventType, { bubbles: true }));
             }
@@ -25,6 +28,7 @@
             const tracker = element._valueTracker;
             if (tracker) tracker.setValue(element.value);
 
+            await window.Utils.delay(200);
             element.blur();
         } catch (err) {
             console.error("Interaction Error:", err);
@@ -71,7 +75,12 @@
         const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], [role="button"], a, [role="link"], div[role="button"], label, [data-testid*="button"], [data-testid*="submit"]'));
 
         for (const text of texts) {
-            const btn = buttons.find(b => (b.innerText || b.textContent || b.value || "").trim().toLowerCase().includes(text.toLowerCase()));
+            const btn = buttons.find(b => {
+                const bText = (b.innerText || b.textContent || b.value || "").trim().toLowerCase();
+                return bText.includes(text.toLowerCase()) &&
+                    !b.disabled &&
+                    (b.offsetParent !== null || b.style.display !== 'none');
+            });
             if (btn) {
                 console.log(`Clicking button: ${text}`);
                 btn.click();
@@ -214,53 +223,102 @@
         }
 
         // 2. Birthday Step
-        if (bdayInput && !bdayInput.dataset.filled) {
-            console.log("Filling Birthday...");
-            // Sometimes it requires MM/DD/YYYY, sometimes specific format. 
-            // We'll try typing slowly.
-            bdayInput.focus();
-            const bday = window.Utils.getRandomBirthday().replace(/\//g, ''); // Try raw numbers first usually better for masks
+        if (bdayInput) {
+            if (!bdayInput.dataset.filled || bdayInput.value.length < 8) {
+                console.log("Filling Birthday...");
+                bdayInput.focus();
 
-            // React 16+ hack for inputs with masks
-            for (let i = 0; i < bday.length; i++) {
-                const char = bday[i];
-                bdayInput.value = bdayInput.value + char;
-                bdayInput.dispatchEvent(new InputEvent('input', { data: char, bubbles: true }));
-                await window.Utils.delay(100);
+                // Clear existing value
+                bdayInput.value = "";
+
+                const bday = window.Utils.getRandomBirthday().replace(/\//g, '');
+
+                // Type character by character with a small delay
+                for (let i = 0; i < bday.length; i++) {
+                    const char = bday[i];
+                    document.execCommand('insertText', false, char); // More robust for React/Masks
+                    bdayInput.dispatchEvent(new InputEvent('input', { data: char, bubbles: true }));
+                    await window.Utils.delay(100);
+                }
+
+                bdayInput.dataset.filled = "true";
+                bdayInput.dataset.lastAttempt = Date.now();
+                await window.Utils.delay(1000);
             }
-            bdayInput.dataset.filled = "true";
 
-            await window.Utils.delay(1000);
-            findAndClickButton(["That's it", "Confirm", "Next", "Continue"]);
-            // Enter key fallback
-            bdayInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+            // Click the button. If we are still here after 3 seconds, try clicking again.
+            const now = Date.now();
+            const lastAttempt = parseInt(bdayInput.dataset.lastAttempt || "0");
+
+            if (now - lastAttempt > 1000) {
+                console.log("Attempting to click Birthday submission button...");
+                const clicked = findAndClickButton(["That's it", "Confirm", "Next", "Continue"]);
+                if (clicked) {
+                    bdayInput.dataset.lastAttempt = now;
+                } else {
+                    // Fallback to Enter key ONLY if button not found or click failed
+                    console.log("Button not found, trying Enter key fallback...");
+                    bdayInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+                    bdayInput.dataset.lastAttempt = now;
+                }
+            }
         }
 
         // 3. Name Step
-        if (nameInput && !nameInput.dataset.filled) {
-            console.log("Filling Name...");
-            await simulateInteraction(nameInput, window.Utils.getRandomName());
-            nameInput.dataset.filled = "true";
-            await window.Utils.delay(800);
-            findAndClickButton(["That's me", "Next", "Continue"]);
+        if (nameInput) {
+            if (!nameInput.dataset.filled || nameInput.value === "") {
+                console.log("Filling Name...");
+                await simulateInteraction(nameInput, window.Utils.getRandomName());
+                nameInput.dataset.filled = "true";
+                nameInput.dataset.lastAttempt = Date.now();
+                await window.Utils.delay(800);
+            }
+
+            const now = Date.now();
+            const lastAttempt = parseInt(nameInput.dataset.lastAttempt || "0");
+            if (now - lastAttempt > 1500) {
+                console.log("On Name screen, clicking 'That's me'...");
+                findAndClickButton(["That's me", "Next", "Continue"]);
+                nameInput.dataset.lastAttempt = now;
+            }
         }
 
         // 4. Email Step
-        if (emailInput && !emailInput.dataset.filled) {
-            console.log("Filling Email...");
-            await simulateInteraction(emailInput, email);
-            emailInput.dataset.filled = "true";
-            await window.Utils.delay(800);
-            findAndClickButton(["That's the one", "Next", "Continue"]);
+        if (emailInput) {
+            if (!emailInput.dataset.filled || emailInput.value === "") {
+                console.log("Filling Email...");
+                await simulateInteraction(emailInput, email);
+                emailInput.dataset.filled = "true";
+                emailInput.dataset.lastAttempt = Date.now();
+                await window.Utils.delay(800);
+            }
+
+            const now = Date.now();
+            const lastAttempt = parseInt(emailInput.dataset.lastAttempt || "0");
+            if (now - lastAttempt > 1500) {
+                console.log("On Email screen, clicking 'That's the one'...");
+                findAndClickButton(["That's the one", "Next", "Continue"]);
+                emailInput.dataset.lastAttempt = now;
+            }
         }
 
         // 5. Password Step
-        if (pwdInput && !pwdInput.dataset.filled) {
-            console.log("Filling Password...");
-            await simulateInteraction(pwdInput, window.Utils.getRandomPassword());
-            pwdInput.dataset.filled = "true";
-            await window.Utils.delay(800);
-            findAndClickButton(["That's it", "Create Account", "Sign Up"]);
+        if (pwdInput) {
+            if (!pwdInput.dataset.filled || pwdInput.value === "") {
+                console.log("Filling Password...");
+                await simulateInteraction(pwdInput, window.Utils.getRandomPassword());
+                pwdInput.dataset.filled = "true";
+                pwdInput.dataset.lastAttempt = Date.now();
+                await window.Utils.delay(800);
+            }
+
+            const now = Date.now();
+            const lastAttempt = parseInt(pwdInput.dataset.lastAttempt || "0");
+            if (now - lastAttempt > 1500) {
+                console.log("On Password screen, clicking 'That's it'...");
+                findAndClickButton(["That's it", "Create Account", "Sign Up"]);
+                pwdInput.dataset.lastAttempt = now;
+            }
         }
 
         // 5.5 Intro "tell us about yourself" screen
@@ -280,11 +338,12 @@
         const fileInput = document.querySelector('input[type="file"], #photo-to-upload');
         const finalizeBtn = document.querySelector('.css-44m5wj');
 
-        // SPECIAL CASE: photo_upload_additional_photos
-        // On this specific page, we ONLY want to click "Continue". Do NOT attempt any photo uploads.
-        if (window.location.href.includes('photo_upload_additional_photos')) {
-            console.log("On Additional Photos page. Seeking 'Continue' button...");
+        // URL Special Cases (Returning early to avoid conflicting logic)
+        const currentUrl = window.location.href;
 
+        // SPECIAL CASE: photo_upload_additional_photos
+        if (currentUrl.includes('photo_upload_additional_photos')) {
+            console.log("On Additional Photos page. Seeking 'Continue' button...");
             // Search all buttons and interactive elements for "Continue" text
             const allBtns = Array.from(document.querySelectorAll('button, [role="button"], span'));
             const continueBtn = allBtns.find(b => {
@@ -298,8 +357,22 @@
                 await window.Utils.delay(2000);
                 return setTimeout(() => runAutomationLoop(email), 1000);
             } else {
-                console.log("Continue button not found or not ready on Additional Photos page, waiting...");
-                // Bail out early MUST return here so it doesn't fall through to general upload logic
+                console.log("Continue button not found or not ready, waiting...");
+                return setTimeout(() => runAutomationLoop(email), 2000);
+            }
+        }
+
+        // SPECIAL CASE: celebration (Screen 15)
+        if (currentUrl.includes('/create/celebration')) {
+            console.log("On Celebration page (Screen 15). Seeking 'Show me how' button...");
+            const showMeBtn = document.querySelector('.css-d0wbpf');
+            if (showMeBtn && showMeBtn.offsetParent !== null) {
+                console.log("Found 'Show me how', clicking...");
+                showMeBtn.click();
+                await window.Utils.delay(2000);
+                return setTimeout(() => runAutomationLoop(email), 1000);
+            } else {
+                console.log("Waiting for 'Show me how' button...");
                 return setTimeout(() => runAutomationLoop(email), 2000);
             }
         }

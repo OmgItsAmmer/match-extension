@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <style>
@@ -10,6 +11,7 @@
       --text: #141651;
       --glass: rgba(255, 255, 255, 0.8);
     }
+
     body {
       width: 320px;
       padding: 0;
@@ -18,10 +20,12 @@
       background: var(--bg);
       color: var(--text);
     }
+
     .container {
       padding: 24px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
     }
+
     h2 {
       margin-top: 0;
       font-size: 20px;
@@ -31,30 +35,53 @@
       -webkit-text-fill-color: transparent;
       font-weight: 800;
     }
+
     .card {
       background: var(--glass);
       backdrop-filter: blur(10px);
       padding: 16px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,5,0.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 5, 0.05);
       margin-bottom: 16px;
     }
-    .file-input-container {
+
+    .input-container {
       position: relative;
       margin-bottom: 16px;
     }
-    input[type="file"] {
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: rgba(20, 22, 81, 0.6);
+      text-transform: uppercase;
+    }
+
+    input[type="number"] {
       width: 100%;
       padding: 12px;
-      border: 1px dashed var(--primary);
+      border: 2px solid rgba(25, 39, 240, 0.1);
       border-radius: 8px;
-      background: transparent;
-      cursor: pointer;
+      background: rgba(255, 255, 255, 0.5);
+      font-size: 16px;
+      color: var(--text);
+      font-weight: 600;
       box-sizing: border-box;
+      transition: all 0.2s ease;
     }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+    }
+
     button {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background-color: var(--primary);
       color: white;
       border: none;
@@ -63,61 +90,92 @@
       cursor: pointer;
       transition: all 0.25s ease;
       box-shadow: 0 4px 15px rgba(25, 39, 240, 0.3);
+      letter-spacing: 1px;
     }
+
     button:hover {
       background-color: var(--primary-hover);
       transform: translateY(-1px);
       box-shadow: 0 6px 20px rgba(25, 39, 240, 0.4);
     }
-    button:disabled {
-      background-color: #ccc;
-      box-shadow: none;
-      cursor: not-allowed;
+
+    button:active {
+      transform: translateY(1px);
     }
+
     #status {
-      font-size: 14px;
+      font-size: 13px;
       margin-top: 12px;
-      padding: 8px;
-      border-radius: 6px;
+      padding: 10px;
+      border-radius: 8px;
+      display: none;
+      line-height: 1.4;
     }
-    .success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
-    .error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
-    .info { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+
+    .success {
+      display: block !important;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .error {
+      display: block !important;
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .info {
+      display: block !important;
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+    }
 
     .logo {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       margin-bottom: 16px;
     }
+
     .logo svg {
       width: 32px;
       height: 32px;
       fill: var(--primary);
     }
+
+    .hint {
+      text-align: center;
+      font-size: 11px;
+      color: rgba(20, 22, 81, 0.5);
+      margin-top: 16px;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="logo">
-      <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-      <h2>Match Automator</h2>
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+      </svg>
+      <h2>Match Automator Pro</h2>
     </div>
-    
+
     <div class="card">
-      <div class="file-input-container">
-        <label for="csvFile" style="display:block; margin-bottom:8px; font-size:12px; font-weight:600;">UPLOAD EMAILS (CSV)</label>
-        <input type="file" id="csvFile" accept=".csv" />
+      <div class="input-container">
+        <label for="tabCount">Parallel Profile Tabs</label>
+        <input type="number" id="tabCount" min="1" max="10" value="1" />
       </div>
-      <div id="fileInfo" style="font-size: 12px; margin-bottom: 8px; font-weight: 500;"></div>
-      <button id="startBtn" disabled>START AUTOMATION</button>
+      <button id="startBtn">LAUNCH AUTOMATION</button>
       <div id="status"></div>
     </div>
 
-    <div style="text-align:center; font-size:10px; color:rgba(20,22,81,0.4);">
-      Ensure the Match registration page is open
+    <div class="hint">
+      Generates unique random Gmail addresses for each profile automatically.
     </div>
   </div>
   <script src="popup.js"></script>
 </body>
+
 </html>

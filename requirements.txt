@@ -1,0 +1,6 @@
+selenium
+fastapi
+uvicorn
+python-dotenv
+webdriver-manager
+requests
